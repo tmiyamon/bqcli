@@ -1,6 +1,7 @@
 from google.cloud import bigquery
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
+from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.lexers import PygmentsLexer
 from prompt_toolkit.styles import Style
 from pygments.lexers.sql import SqlLexer
@@ -33,14 +34,29 @@ style = Style.from_dict({
     'scrollbar.button': 'bg:#222222',
 })
 
+kb = KeyBindings()
+
+
+@kb.add('enter')
+def kb_enter(event):
+    if event.current_buffer.text.strip()[-1] == ';':
+        event.current_buffer.validate_and_handle()
+    else:
+        event.current_buffer.insert_text("\n")
+
+
 session = PromptSession(
-    lexer=PygmentsLexer(SqlLexer), completer=sql_completer, style=style)
+    lexer=PygmentsLexer(SqlLexer),
+    key_bindings=kb,
+    completer=sql_completer,
+    style=style
+)
 
 client = bigquery.Client()
 
 while True:
     try:
-        text = session.prompt('> ')
+        text = session.prompt('> ', multiline=True)
     except KeyboardInterrupt:
         continue  # Control-C pressed. Try again.
     except EOFError:
