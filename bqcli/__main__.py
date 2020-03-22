@@ -1,3 +1,4 @@
+import click
 from google.cloud import bigquery
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
@@ -71,11 +72,13 @@ while True:
         if result.total_rows:
             headers = (s.name for s in result.schema)
             values = (r.values() for r in result)
-            print(tabulate(values, headers=headers, tablefmt="orgtbl"))
+            output = tabulate(values, headers=headers, tablefmt="orgtbl")
             if max_results < result.total_rows:
-                print(f'({max_results} of {result.total_rows} rows)')
+                output += '\n' + f'({max_results} of {result.total_rows} rows)'
             else:
-                print(f'({result.total_rows} rows)')
+                output += '\n' + f'({result.total_rows} rows)'
+            click.echo_via_pager(output)
+            print(output)
 
     except Exception as e:
         print(repr(e))
