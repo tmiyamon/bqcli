@@ -43,7 +43,8 @@ kb = KeyBindings()
 
 @kb.add('enter')
 def kb_enter(event):
-    if event.current_buffer.text.strip()[-1] == ';':
+    text = event.current_buffer.text.strip()
+    if not text or text.endswith(';'):
         event.current_buffer.validate_and_handle()
     else:
         event.current_buffer.insert_text("\n")
@@ -66,6 +67,8 @@ client = bigquery.Client()
 while True:
     try:
         text = session.prompt('> ', multiline=True)
+        if not text.strip():
+            continue  # Blank line
     except KeyboardInterrupt:
         continue  # Control-C pressed. Try again.
     except EOFError:
