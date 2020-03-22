@@ -5,6 +5,7 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.lexers import PygmentsLexer
 from prompt_toolkit.styles import Style
 from pygments.lexers.sql import SqlLexer
+from tabulate import tabulate
 
 sql_completer = WordCompleter([
     'abort', 'action', 'add', 'after', 'all', 'alter', 'analyze', 'and',
@@ -63,8 +64,18 @@ while True:
         break  # Control-D pressed.
 
     try:
+        max_results = 100
         query_job = client.query(text)
-        for row in query_job:
-            print(row)
+        result = query_job.result(max_results=max_results)
+
+        if result.total_rows:
+            headers = (s.name for s in result.schema)
+            values = (r.values() for r in result)
+            print(tabulate(values, headers=headers, tablefmt="orgtbl"))
+            if max_results < result.total_rows:
+                print(f'({max_results} of {result.total_rows} rows)')
+            else:
+                print(f'({result.total_rows} rows)')
+
     except Exception as e:
         print(repr(e))
