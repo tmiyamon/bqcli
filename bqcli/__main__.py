@@ -9,6 +9,7 @@ from prompt_toolkit.lexers import PygmentsLexer
 from prompt_toolkit.styles import Style
 from pygments.lexers.sql import SqlLexer
 from tabulate import tabulate
+from bqcli.config import Config
 
 sql_completer = WordCompleter([
     'abort', 'action', 'add', 'after', 'all', 'alter', 'analyze', 'and',
@@ -50,12 +51,12 @@ def kb_enter(event):
         event.current_buffer.insert_text("\n")
 
 
-(pathlib.Path.home() / '.bqcli').mkdir(exist_ok=True)
-history = FileHistory(str(pathlib.Path.home() / '.bqcli' / 'history'))
+config = Config()
+config.prepare()
 
 session = PromptSession(
     lexer=PygmentsLexer(SqlLexer),
-    history=history,
+    history=FileHistory(config.history_path),
     key_bindings=kb,
     completer=sql_completer,
     style=style
