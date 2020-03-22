@@ -1,7 +1,9 @@
+import pathlib
 import click
 from google.cloud import bigquery
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
+from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.lexers import PygmentsLexer
 from prompt_toolkit.styles import Style
@@ -47,14 +49,19 @@ def kb_enter(event):
         event.current_buffer.insert_text("\n")
 
 
+(pathlib.Path.home() / '.bqcli').mkdir(exist_ok=True)
+history = FileHistory(str(pathlib.Path.home() / '.bqcli' / 'history'))
+
 session = PromptSession(
     lexer=PygmentsLexer(SqlLexer),
+    history=history,
     key_bindings=kb,
     completer=sql_completer,
     style=style
 )
 
 client = bigquery.Client()
+
 
 while True:
     try:
