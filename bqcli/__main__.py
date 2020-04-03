@@ -1,4 +1,5 @@
 import pathlib
+import re
 import click
 from google.cloud import bigquery
 from prompt_toolkit import PromptSession
@@ -10,6 +11,7 @@ from prompt_toolkit.styles import Style
 from pygments.lexers.sql import SqlLexer
 from tabulate import tabulate
 from bqcli.config import Config
+from bqcli.metacmd import metacmd
 
 sql_completer = WordCompleter([
     'abort', 'action', 'add', 'after', 'all', 'alter', 'analyze', 'and',
@@ -45,7 +47,7 @@ kb = KeyBindings()
 @kb.add('enter')
 def kb_enter(event):
     text = event.current_buffer.text.strip()
-    if not text or text.endswith(';'):
+    if not text or text.endswith(';') or text.startswith('\\'):
         event.current_buffer.validate_and_handle()
     else:
         event.current_buffer.insert_text("\n")
@@ -65,6 +67,11 @@ session = PromptSession(
 client = bigquery.Client()
 
 
+@click.group()
+def cli():
+    pass
+
+
 while True:
     try:
         text = session.prompt('> ', multiline=True)
@@ -75,21 +82,24 @@ while True:
     except EOFError:
         break  # Control-D pressed.
 
-    try:
-        max_results = 100
-        query_job = client.query(text)
-        result = query_job.result(max_results=max_results)
+    if text.startswith('\\'):
+        metacmd(re.split('[ ]+', str(text[1:])), obj={'client': client}, standalone_mode=False)
+    else:
+        try:
+            max_results = 100
+            query_job = client.query(text)
+            result = query_job.result(max_results=max_results)
 
-        if result.total_rows:
-            headers = (s.name for s in result.schema)
-            values = (r.values() for r in result)
-            output = tabulate(values, headers=headers, tablefmt="orgtbl")
-            if max_results < result.total_rows:
-                output += '\n' + f'({max_results} of {result.total_rows} rows)'
-            else:
-                output += '\n' + f'({result.total_rows} rows)'
-            click.echo_via_pager(output)
-            print(output)
+            if result.total_rows:
+                headers = (s.name for s in result.schema)
+                values = (r.values() for r in result)
+                output = tabulate(values, headers=headers, tablefmt="psql")
+                if max_results < result.total_rows:
+                    output += '\n' + f'({max_results} of {result.total_rows} rows)'
+                else:
+                    output += '\n' + f'({result.total_rows} rows)'
+                click.echo_via_pager(output)
+                print(output)
 
-    except Exception as e:
-        print(repr(e))
+        except Exception as e:
+            print(repr(e))
