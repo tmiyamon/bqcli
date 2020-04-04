@@ -108,7 +108,7 @@ while True:
         break  # Control-D pressed.
 
     if text.startswith('\\'):
-        metacmd(re.split('[ ]+', str(text[1:])), obj={'client': client}, standalone_mode=False)
+        metacmd(re.split('[ ]+', str(text[1:]).strip()), obj={'client': client}, standalone_mode=False)
     else:
         try:
             max_results = 100
