@@ -8,6 +8,7 @@ from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.lexers import PygmentsLexer
 from prompt_toolkit.styles import Style
+from prompt_toolkit.validation import Validator, ValidationError
 from pygments.lexers.sql import SqlLexer
 from tabulate import tabulate
 from bqcli.config import Config
@@ -56,15 +57,39 @@ def kb_enter(event):
 config = Config()
 config.prepare()
 
+client = bigquery.Client()
+
+
+class SqlValidator(Validator):
+    def __init__(self, client):
+        self.client = client
+
+    def validate(self, document):
+        text = document.text
+        if text.startswith('\\'):
+            return
+
+        job_config = bigquery.QueryJobConfig(
+            dry_run=True,
+            use_query_cache=False
+        )
+
+        try:
+            self.client.query(document.text, job_config=job_config)
+        except Exception as e:
+            error = e.errors[0]
+            raise ValidationError(message=error['message'], cursor_position=0)
+
+
 session = PromptSession(
     lexer=PygmentsLexer(SqlLexer),
     history=FileHistory(config.history_path),
     key_bindings=kb,
     completer=sql_completer,
-    style=style
+    style=style,
+    validate_while_typing=False,
+    validator=SqlValidator(client)
 )
-
-client = bigquery.Client()
 
 
 @click.group()
